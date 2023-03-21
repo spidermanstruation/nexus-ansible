@@ -1,0 +1,21 @@
+---
+# - name: Install haproxy repository
+#   ansible.builtin.template:
+#     src: etc/yum.repos.d/ius.repo.j2
+#     dest: /etc/yum.repos.d/ius.repo
+
+- name: Install haproxy
+  ansible.builtin.apt:
+    name: "{{ haproxy_packet }}"
+    state: present
+    update_cache: true
+  notify:
+    - restart haproxy
+
+- name: Install haproxy config
+  ansible.builtin.template:
+    src: etc/haproxy/haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    validate: "haproxy -f %s -c"
+  notify:
+    - reload haproxy

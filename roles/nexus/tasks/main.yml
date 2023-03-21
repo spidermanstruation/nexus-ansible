@@ -1,0 +1,43 @@
+---
+- name: Installing dependencies
+  include_tasks: docker-install.yml
+
+- name: Prepare logical volume for blob store
+  include_tasks: nexus-volume-prepare.yml
+  when: lv_is_ready|bool == false
+
+- name: Set up a nexus-data directory to make volume for docker container
+  file: path=/nexus-data state=directory mode=700 group=root owner='200'
+
+- name: Creating a base directory
+  file:
+    path: "{{ docker_compose_deploy_base_directory }}"
+    mode: 0755
+    state: directory
+
+- name: Login to image registries
+  #community.docker.docker_login
+  docker_login:
+    registry_url: "{{ item.key }}"
+    username: "{{ item.value.username }}"
+    password: "{{ item.value.password }}"
+    state: present
+  become: true
+  #no_log: true
+  loop: "{{ docker_compose_deploy_auth | dict2items }}"
+
+- name: Deploy service
+  include_tasks: service-deploy.yml
+  loop: "{{ docker_compose_deploy_services }}"
+  loop_control:
+    loop_var: service
+
+- name: Logout from image registries
+  docker_login:
+    registry_url: "{{ item.key }}"
+    state: absent
+  become: true
+  #no_log: true
+  loop: "{{ docker_compose_deploy_auth | dict2items }}"
+  when: docker_compose_deploy_auth_logout|bool == true
+

@@ -1,0 +1,7 @@
+---
+- name: Installing HAProxy
+  hosts: all
+  become: true
+  roles:
+    - haproxy
+  tags: haproxy

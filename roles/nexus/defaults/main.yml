@@ -1,0 +1,38 @@
+---
+# The base directory for services.
+docker_compose_deploy_base_directory: /app/docker_compose_services
+
+docker_compose_deploy_services:
+  - nexus     # List of services to deploy. Only one service
+
+docker_registry: registry-1.docker.io
+docker_registry_path: sonatype/nexus
+docker_compose_deploy_auth:           # Authentication in some docker registry.
+  registry-1.docker.io:
+    username: "{{ ci_registry_username }}"
+    password: "{{ ci_registry_passwod }}"
+
+# Perform docker logout after deployment.
+docker_compose_deploy_auth_logout: false
+
+http_proxy: ""      # Proxy for apt in format: hostname:port
+https_proxy: ""
+
+
+docker_apt_key_url: https://download.docker.com/linux/ubuntu/gpg
+docker_apt_repo_string: 'deb https://download.docker.com/linux/ubuntu focal stable'
+
+# LVM variables
+lv_is_ready: true           # if true then not prepare lv for nexus blob store (temporary solution)
+pv_name: /dev/sdb           # physical volume name
+lv_size: 300G               # logical volume size
+vg_name: vg01               # volume group name
+lv_name: nexus_volume_lv    # lv_name - do not use "-" in logical volume name
+
+# Nexus OSS Variables
+nexus_volume_path: /nexus-volume  # nexus volume path for nexus  default blob store
+nexus_version: 3.42.0             # nexus oss version
+nexus_ports:                      # nexus ports
+  - 8081:8081
+  - 8082:8082 
+  - 8083:8083 

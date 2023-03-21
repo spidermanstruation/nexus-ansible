@@ -1,0 +1,88 @@
+---
+haproxy_packet: "{{ haproxy_packet_name }}={{ haproxy_packet_version }}"
+haproxy_packet_name: haproxy
+haproxy_packet_version: 2.0.29-0ubuntu1.3
+haproxy_global_raw_options:
+  - log 127.0.0.1:514 local0 err
+  - stats socket /var/lib/haproxy/stats mode 660 level admin expose-fd listeners
+  - stats timeout 30s
+  - tune.ssl.default-dh-param 2048
+haproxy_global_ssl_default_bind_ciphers: 'ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1:!AESCCM'
+haproxy_global_ssl_default_bind_ciphersuites: 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
+haproxy_global_ssl_default_bind_options: 'ssl-min-ver TLSv1.2'
+
+haproxy_global_ssl_default_server_ciphers: 'ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1:!AESCCM'
+haproxy_global_ssl_default_server_ciphersuites: 'TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256'
+haproxy_global_ssl_default_server_options: 'ssl-min-ver TLSv1.2'
+
+haproxy_defaults_option:
+  - httplog
+
+haproxy_frontend:
+  - name: http
+    description: Front-end for all HTTP traffic
+    bind:
+      - listen: 0.0.0.0:80
+      - listen: 0.0.0.0:443 ssl crt /opt/cert.pem
+    mode: http
+    option:
+      - forwardfor
+    raw_options:
+      - redirect scheme https unless { ssl_fc }
+      - http-request add-header X-Forwarded-Proto https
+      - http-request redirect scheme https code 301 unless { ssl_fc }
+    acl:
+      - string: host_nexus hdr(host) -i nexus.example.com
+      - string: host_docker_proxy hdr(host) -i docker-proxy.example.com
+      - string: host_docker_registry hdr(host) -i docker-registry.example.com
+    use_backend:
+      - nexus-http if host_nexus
+      - docker-proxy if host_docker_proxy
+      - docker-registry if host_docker_registry
+      
+  - name: exporter
+    bind:
+      - listen: 0.0.0.0:8404
+    option:
+      - http-use-htx
+    http_request:
+      - action: use-service
+        param: prometheus-exporter
+        cond: 'if { path /metrics }'
+    raw_options:
+      - stats enable
+      - stats uri /stats
+      - stats refresh 10s
+
+
+
+haproxy_backend:
+  - name: nexus-http
+    description: nexus http
+    mode: http
+    balance: first
+    server:
+      - name: dc1-v-nexus001
+        listen: 127.0.0.1:8081
+  
+  - name: docker-proxy
+    description: docker-proxy
+    mode: http
+    balance: first
+    server:
+      - name: dc1-v-nexus001
+        listen: 127.0.0.1:8082
+
+  - name: docker-registry
+    description: docker-registry
+    mode: http
+    balance: first
+    server:
+      - name: dc1-v-nexus001
+        listen: 127.0.0.1:8083
+
+certs:
+  - path: /opt/cert.pem
+    cert: |
+      {{ lookup('hashi_vault', 'path/to/certificates:tls.crt') }}
+      {{ lookup('hashi_vault', 'path/to/certificates:tls.key') }}

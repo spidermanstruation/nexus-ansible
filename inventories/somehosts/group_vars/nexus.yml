@@ -1,0 +1,21 @@
+---
+# Perform docker logout after deployment.
+docker_compose_deploy_auth_logout: false
+
+http_proxy: "http://10.0.0.12:3128"
+https_proxy: "http://10.0.0.12:3128"
+
+# LVM variables
+lv_is_ready: true           # if true then do not prepare lv for nexus blob store (temporary solution)
+pv_name: /dev/sdb           # physical volume name
+lv_size: 300G               # physical volume size
+vg_name: vg01               # volume group name
+lv_name: nexus_volume_lv    # lv_name - do not use "-" in logical volume name
+
+# Nexus OSS Variables
+nexus_volume_path: /nexus-volume  # nexus volume path for nexus  default blob store
+nexus_version: 3.42.0             # nexus oss version
+nexus_ports:                      # nexus ports
+  - 8081:8081
+  - 8082:8082 
+  - 8083:8083 

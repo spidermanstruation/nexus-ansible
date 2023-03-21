@@ -1,0 +1,72 @@
+---
+- name: Ensure old versions of Docker are not installed.
+  package:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+
+- name: Installing pip
+  apt:
+    name:
+      - python3-pip
+    state: present
+    update_cache: true
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+
+- name: Ensure additional dependencies are installed.
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - lsb-release
+      - software-properties-common
+      - gnupg
+    state: present
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+
+- name: Add Docker apt key.
+  apt_key:
+    url: "{{ docker_apt_key_url }}"
+    state: present
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: "{{ docker_apt_repo_string }}"
+    state: present
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+
+- name: Update apt and install docker-ce and docker-compose
+  apt:
+    name:
+      - docker-ce
+      - docker-compose
+    state: present
+    update_cache: true
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"
+
+- name: Installing python libraries
+  pip:
+    name:
+      - docker
+      - docker-compose     
+    state: present
+    extra_args: "{{ pip_extra_args | default(omit, True) }}"
+  environment:
+    http_proxy: "{{ http_proxy }}"
+    https_proxy: "{{ https_proxy }}"

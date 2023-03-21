@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  nexus:
+    restart: always
+    image: {{ docker_registry }}/{{ docker_registry_path }}:{{ nexus_version }}
+    ports: {{ nexus_ports }} 
+    volumes:
+      - {{ nexus_volume_path }}:/nexus-volume
+      - /nexus-data:/nexus-data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    environment:
+      INSTALL4J_ADD_VM_PARAMS: "-Xms4G -Xmx4G -XX:MaxDirectMemorySize=6717M -Djava.util.prefs.userRoot=/nexus-data/javaprefs"

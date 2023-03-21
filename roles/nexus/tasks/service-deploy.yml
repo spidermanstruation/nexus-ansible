@@ -1,0 +1,56 @@
+---
+- name: Creating a directory for the service
+  file:
+    path: "{{ docker_compose_deploy_base_directory }}/{{ service }}"
+    mode: 0755
+    state: directory
+
+- name: Getting service tree
+  set_fact:
+    service_tree: "{{ lookup('filetree', 'docker_compose_deploy/' + service, wantlist=True) }}"
+
+- name: Creating internal directories
+  file:
+    path: "{{ docker_compose_deploy_base_directory }}/{{ service }}/{{ item.path }}"
+    mode: 0755
+    state: directory
+  loop: "{{ service_tree }}"
+  when: item.state == 'directory'
+
+- name: Copying files
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ docker_compose_deploy_base_directory }}/{{ service }}/{{ item.path }}"
+    mode: 0644
+    backup: true
+  loop: "{{ service_tree }}"
+  when:
+    - item.state == 'file'
+    - item.path | splitext | last != '.j2'
+  register: copied_files
+
+- name: Copying templates
+  #ansible.builtin.template
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ docker_compose_deploy_base_directory }}/{{ service }}/{{ item.path | regex_replace('.j2$', '') }}"
+    mode: 0644
+    backup: true
+  loop: "{{ service_tree }}"
+  when:
+    - item.state == 'file'
+    - item.path | splitext | last == '.j2'
+  register: copied_templates
+
+- name: Stopping the service
+  docker_compose:
+    project_src: "{{ docker_compose_deploy_base_directory }}/{{ service }}"
+    state: absent
+  become: true
+  when: copied_files.changed or copied_templates.changed
+
+- name: Starting the service
+  docker_compose:
+    project_src: "{{ docker_compose_deploy_base_directory }}/{{ service }}"
+    state: present
+  become: true

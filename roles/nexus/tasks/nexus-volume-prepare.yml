@@ -1,0 +1,47 @@
+---
+- name: Create a volume group
+  #community.general.lvg:
+  lvg:
+    vg: "{{ vg_name }}"
+    pvs: "{{ pv_name }}"
+    pvresize: true
+    state: present
+
+- name: Create a logical volume the size of all remaining space in the volume group
+  #community.general.lvol:
+  lvol:
+    vg: "{{ vg_name }}"
+    lv: "{{ lv_name }}"
+    size: "{{ lv_size }}"
+    shrink: no
+    state: present
+
+- name: Create nexus-volume directory for blob store
+  #ansible.builtin.file:
+  file:
+    path: "{{ nexus_volume_path }}"
+    mode: '755'
+    group: root
+    owner: '200'
+    state: directory
+
+- name: Create a ext4 filesystem on lv
+  #community.general.filesystem
+  filesystem:
+    fstype: ext4
+    dev: /dev/{{ vg_name }}/{{ lv_name }}
+    #opts: -cc
+
+
+- name: Catch UUID
+  shell: blkid -s UUID -o value /dev/mapper/{{ vg_name }}-{{ lv_name }}
+  register: blkid_out
+
+- name: Mount logical volume to /nexus-volume
+  #ansible.posix.mount
+  mount:
+    path: "{{ nexus_volume_path }}"
+    src: /dev/disk/by-uuid/{{ blkid_out.stdout }}
+    state: present
+    fstype: ext4
+    passno: "1"

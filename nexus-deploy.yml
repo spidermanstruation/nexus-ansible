@@ -1,0 +1,6 @@
+---
+- name: Deploy Nexus OSS
+  hosts: nexus
+  become: true
+  roles:
+    - nexus
